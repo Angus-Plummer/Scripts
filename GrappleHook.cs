@@ -54,6 +54,7 @@ public class GrappleHook : MonoBehaviour
             connected = true;
             rope = (GameObject)Instantiate(node_prefab, transform.position, Quaternion.identity, transform);
             rope.GetComponent<DistanceJoint2D>().connectedBody = player.GetComponent<Rigidbody2D>();
+            rope.GetComponent<RopeNode>().length = hook_to_player.magnitude;
             rope.GetComponent<DistanceJoint2D>().distance = hook_to_player.magnitude;
             rope.GetComponent<RopeNode>().attached_object = transform;
         }

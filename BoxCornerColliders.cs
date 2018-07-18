@@ -6,7 +6,7 @@ public class BoxCornerColliders : MonoBehaviour
 {
 
     public GameObject corner_prefab;
-    private float collider_radius = 0.3f;
+    private float collider_radius = 0.2f;
     private List<GameObject> colliders;
     // Use this for initialization
     void Start()
@@ -25,8 +25,8 @@ public class BoxCornerColliders : MonoBehaviour
             colliders.Add(new_corner);
         }
         // set the centre of each collider to one of the corners with a small offset away from the corner
-        float offset_x = 0.5f;// + (collider_radius / transform.localScale.x) /4f;
-        float offset_y = 0.5f;// + (collider_radius / transform.localScale.y) /4f;
+        float offset_x = 0.5f + (collider_radius / transform.localScale.x) /4f;
+        float offset_y = 0.5f + (collider_radius / transform.localScale.y) /4f;
         colliders[0].transform.localPosition = new Vector2(offset_x, offset_y);
         colliders[1].transform.localPosition = new Vector2(offset_x, -offset_y);
         colliders[2].transform.localPosition = new Vector2(-offset_x, offset_y);

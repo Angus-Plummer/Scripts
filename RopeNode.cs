@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -9,14 +9,16 @@ public class RopeNode : MonoBehaviour {
     public Object node_prefab;
 
     public LayerMask corner_layer; // layer mask for corner colliders
+    public LayerMask obstacle_layer; // layer mask for obstacles
     public Transform attached_object;
     public GameObject child_node; // next node in chain
+    public float length; // length of this segment of rope
 
     private Transform last_corner = null; // the last corner collider that was collided with by this node's rope
-    private bool can_split_at_last_corner_again = false; // can only split again at the last corner it split at after it has moved away from the corner collider (prevents it retriggering)
+    public bool can_split_at_last_corner_again = false; // can only split again at the last corner it split at after it has moved away from the corner collider (prevents it retriggering)
 
     private float previous_angle_with_child = 0; // keeps track of angle between node and child node directions. If it changes sign then they must be rejoined
-    private bool can_combine = false; // when initiated it is not possible to join with its child. This will become true when it has a child and the angle between them is increasing
+    public bool can_combine = false; // when initiated it is not possible to join with its child. This will become true when it has a child and the angle between them is increasing
 
 
     // Use this for initialization
@@ -30,6 +32,7 @@ public class RopeNode : MonoBehaviour {
 	void Update ()
     {
         Vector2 node_to_child = NodeToChild();
+        GetComponent<DistanceJoint2D>().distance = length;
 
         RaycastHit2D hit_info; // to store rayscast info
             
@@ -39,8 +42,20 @@ public class RopeNode : MonoBehaviour {
         {
             if (hit_info.transform != last_corner || can_split_at_last_corner_again)
             {
-                last_corner = hit_info.transform;
-                SplitRope(hit_info.transform);
+                if (child_node)
+                {
+                    if (hit_info.transform != child_node.GetComponent<RopeNode>().attached_object)
+                    {
+                        last_corner = hit_info.transform;
+                        SplitRope(hit_info.transform);
+                    }
+                }
+                else
+                {
+                    last_corner = hit_info.transform;
+                    SplitRope(hit_info.transform);
+                }
+                
             }
         }
         else if (last_corner)
@@ -50,11 +65,13 @@ public class RopeNode : MonoBehaviour {
         // if the node has a child we need to check if it should rejoin with the child
         if (child_node != null)
         {
+            Vector2 node_to_grandchild = NodeToChild() + child_node.GetComponent<RopeNode>().NodeToChild();
+            hit_info = Physics2D.Raycast(transform.position, node_to_grandchild, node_to_grandchild.magnitude, obstacle_layer.value);
             // if it is allowed to combine with child then we check if it should be
             if (can_combine)
             {
                 float current_angle_with_child = AngleWithChild();
-                if (Mathf.Sign(previous_angle_with_child) != Mathf.Sign(current_angle_with_child))
+                if (Mathf.Sign(previous_angle_with_child) != Mathf.Sign(current_angle_with_child) && hit_info.transform == null)
                 {
                     JoinWithChild();
                 }
@@ -62,8 +79,8 @@ public class RopeNode : MonoBehaviour {
             // if it cant be combined yet, we check if can_join should be set to true
             else
             {
-                // if the magnitude of the angle with the child is increasing then set can_combine to true
-                if( Mathf.Abs( AngleWithChild() ) > Mathf.Abs(previous_angle_with_child) )
+                // if there has been an obstacle between the node and its grandchild then set can_combine to true
+                if(hit_info.transform != null)
                 {
                     can_combine = true;
                 }
@@ -75,6 +92,8 @@ public class RopeNode : MonoBehaviour {
             previous_angle_with_child = AngleWithChild();
         }
 
+        MaintainLength();
+        GetComponent<DistanceJoint2D>().distance = length;
         // update the position of the node to match its attached object
         transform.position = attached_object.position;
     }
@@ -83,18 +102,28 @@ public class RopeNode : MonoBehaviour {
     void SplitRope(Transform corner)
     {
         Vector2 node_to_split = (Vector2)corner.position - (Vector2)transform.position; // vector from this node to the split point
+        GameObject current_child = child_node;
         // create and set up child node
         child_node = (GameObject)Instantiate(node_prefab, corner.position, Quaternion.identity, transform);
+        if (current_child)
+        {
+            current_child.transform.SetParent(child_node.transform);
+            child_node.GetComponent<RopeNode>().child_node = current_child;
+            child_node.GetComponent<DistanceJoint2D>().enabled = false;
+        }
 
         // Declare corner as the transform the node is attached to
         child_node.GetComponent<RopeNode>().attached_object = corner;
 
         // child rope connects to the rigid body this node is attached to. distance is current distance - current node to corner
         child_node.GetComponent<DistanceJoint2D>().connectedBody = GetComponent<DistanceJoint2D>().connectedBody;
-        child_node.GetComponent<DistanceJoint2D>().distance = GetComponent<DistanceJoint2D>().distance - node_to_split.magnitude;
+        child_node.GetComponent<RopeNode>().length = length - node_to_split.magnitude;
+        child_node.GetComponent<DistanceJoint2D>().distance = child_node.GetComponent<RopeNode>().length;
 
-        // disable the joint on this node
+        // disable the joint on this node but connect to the new child
         GetComponent<DistanceJoint2D>().enabled = false;
+        GetComponent<DistanceJoint2D>().connectedBody = child_node.GetComponent<Rigidbody2D>();
+        length = node_to_split.magnitude;
 
         // update combination and splitting flags. After splitting, the node must wait for certain conditions before being able to combine with its child or to split at the same corner again
         // to combine: the angle between the node and its child must have grown
@@ -111,22 +140,50 @@ public class RopeNode : MonoBehaviour {
     {
         if (child_node != null)
         {
+            length += child_node.GetComponent<RopeNode>().length;
             // if child node is the last node, i.e connected to the player, then connect this node to the player
-            if(child_node.GetComponent<RopeNode>().child_node == null)
+            if (child_node.GetComponent<RopeNode>().child_node == null)
             {
                 GetComponent<DistanceJoint2D>().connectedBody = player.GetComponent<Rigidbody2D>();
                 Destroy(child_node);
                 child_node = null;
+                // re-enable the joint
+                GetComponent<DistanceJoint2D>().enabled = true;
             }
             // otherwise connect the the child of the child
             else
             {
                 GameObject grandchild_node = child_node.GetComponent<RopeNode>().child_node;
+                grandchild_node.transform.SetParent(transform);
                 Destroy(child_node);
                 child_node = grandchild_node;
+
             }
-            // re-enable the joint
-            GetComponent<DistanceJoint2D>().enabled = true;
+        }
+    }
+
+    // maintain length of the rope. will take or give length to the child node as appropriate to maintain the length
+    public void MaintainLength()
+    {
+        // only do anything if the node has a child
+        if (child_node)
+        {
+            float target_length = length;
+            float actual_length = NodeToChild().magnitude;
+            float delta = actual_length - target_length;
+            float child_target_length = child_node.GetComponent<RopeNode>().length;
+            if (child_target_length > delta)
+            {
+                child_node.GetComponent<RopeNode>().length -= delta;
+            }
+            else
+            {
+                float missing = delta - child_target_length;
+                actual_length -= missing;
+                child_node.GetComponent<RopeNode>().length = 0;
+                JoinWithChild();
+            }
+            length = actual_length;
         }
     }
 
@@ -154,3 +211,4 @@ public class RopeNode : MonoBehaviour {
         return node_to_child;
     }
 }
+
