@@ -39,10 +39,16 @@ public class BallHandler : MonoBehaviour
                 Vector2 actual_target = hit_info.point;
                 // correct to have the hook a small normal displacement from the collider
                 actual_target += hit_info.normal * hook_prefab.GetComponent<CircleCollider2D>().radius * 0.2f;
+                // convert to the local coordinate space of the collided obstace
+                actual_target = hit_info.transform.InverseTransformPoint(actual_target);
 
                 // instantiate the new hook and set its target to be that calculated from the raycast
-                current_hook = (GameObject)Instantiate(hook_prefab, transform.position, Quaternion.identity);
+                current_hook = (GameObject)Instantiate(hook_prefab, transform.position, Quaternion.identity, hit_info.transform);
                 current_hook.GetComponent<GrappleHook>().hook_target = actual_target;
+
+                current_hook.transform.localScale = new Vector3(current_hook.transform.localScale.x / hit_info.transform.lossyScale.x, 
+                                                                current_hook.transform.localScale.y / hit_info.transform.lossyScale.y, 1);
+
             }
         }
         else if (Input.GetMouseButtonDown(1))

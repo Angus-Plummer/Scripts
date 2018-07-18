@@ -36,10 +36,10 @@ public class GrappleHook : MonoBehaviour
 
         RaycastHit2D hit_info;
         // if the hook has not reached its target the move towards it
-        if ((Vector2)transform.position != hook_target)
+        if ((Vector2)transform.localPosition != hook_target)
         {
             // every frame move towards the target location at speed: hook_speed
-            transform.position = Vector2.MoveTowards(transform.position, hook_target, hook_speed);
+            transform.localPosition = Vector2.MoveTowards(transform.localPosition, hook_target, hook_speed);
             // perform raycast to check if path between hook and player is obstructed
             hit_info = Physics2D.Raycast(transform.position, hook_to_player, hook_to_player.magnitude, obstacle_layer.value);
             // if there is a collider between them then destroy the hook

@@ -74,6 +74,9 @@ public class RopeNode : MonoBehaviour {
         {
             previous_angle_with_child = AngleWithChild();
         }
+
+        // update the position of the node to match its attached object
+        transform.position = attached_object.position;
     }
 
     // split the rope at specified point
