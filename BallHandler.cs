@@ -42,7 +42,7 @@ public class BallHandler : MonoBehaviour
 
                 // instantiate the new hook and set its target to be that calculated from the raycast
                 current_hook = (GameObject)Instantiate(hook_prefab, transform.position, Quaternion.identity);
-                current_hook.GetComponent<StiffRopeControl>().hook_target = actual_target;
+                current_hook.GetComponent<GrappleHook>().hook_target = actual_target;
             }
         }
         else if (Input.GetMouseButtonDown(1))
