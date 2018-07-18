@@ -6,7 +6,7 @@ public class BoxCornerColliders : MonoBehaviour
 {
 
     public GameObject corner_prefab;
-    private float collider_radius = 0.1f;
+    private float collider_radius = 0.3f;
     private List<GameObject> colliders;
     // Use this for initialization
     void Start()
