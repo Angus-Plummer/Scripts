@@ -37,13 +37,29 @@ public class RopeNode : MonoBehaviour {
         hit_info = Physics2D.Raycast(transform.position, node_to_child, node_to_child.magnitude, obstacle_layer.value);
         if (hit_info.collider != null)
         {
+            // convert the coordinates of the vertices to world coords
             Vector2[] vertex_world_positions = new Vector2[hit_info.transform.GetComponent<PolygonCollider2D>().points.Length];
-            for(int i = 0; i < hit_info.transform.GetComponent<PolygonCollider2D>().points.Length; i++)
+            for (int i = 0; i < hit_info.transform.GetComponent<PolygonCollider2D>().points.Length; i++)
             {
                 vertex_world_positions[i] = hit_info.transform.TransformPoint(hit_info.transform.GetComponent<PolygonCollider2D>().points[i]);
             }
-            int vertex_index = ClosestPoint(hit_info.point, vertex_world_positions);
+            // determine if any vertices need to be excluded when finding nearest vertex to collision
+            int excluding_vertex = -1; // define as -1 as not sure what undefined will do
+            if (hit_info.transform == attached_object) // if the collided object is the one this node is attached to then cant split at the current position
+            {
+                excluding_vertex = attached_vertex;
+            }
+            else if (child_node) // if there is a child node then cant split again at the child's position
+            {
+                if (hit_info.transform == child_node.GetComponent<RopeNode>().attached_object)
+                {
+                    excluding_vertex = child_node.GetComponent<RopeNode>().attached_vertex;
+                }
+            }
+            // find the vertex on the collider that is nearest the line and split there
+            int vertex_index = ClosestToLine(transform.position, (Vector2)transform.position + node_to_child, vertex_world_positions, excluding_vertex);
             SplitRope(hit_info.transform, vertex_index);
+  
         }
        
         // if the node has a child we need to check if it should rejoin with the child
@@ -166,7 +182,7 @@ public class RopeNode : MonoBehaviour {
 
             Vector2 vertex_normal = (edge1.normalized + edge2.normalized).normalized;
 
-            Vector2 new_position = (Vector2)attached_object.TransformPoint(attached_collider.points[attached_vertex]) + vertex_normal * vertex_offset;
+            Vector2 new_position = (Vector2)attached_object.TransformPoint(attached_collider.points[attached_vertex]) + (Vector2)attached_object.TransformDirection(vertex_normal).normalized * vertex_offset;
             transform.position = new_position;
         }
     }
@@ -180,6 +196,8 @@ public class RopeNode : MonoBehaviour {
             float target_length = length;
             float actual_length = NodeToChild().magnitude;
             float delta = actual_length - target_length;
+            length = actual_length;
+
             float child_target_length = child_node.GetComponent<RopeNode>().length;
             if (child_target_length > delta)
             {
@@ -195,12 +213,11 @@ public class RopeNode : MonoBehaviour {
                 else
                 {
                     float missing = delta - child_target_length;
-                    actual_length -= missing;
+                    length -= missing;
                     child_node.GetComponent<RopeNode>().length = 0;
                     JoinWithChild();
                 }
             }
-            length = actual_length;
         }
     }
 
@@ -234,6 +251,35 @@ public class RopeNode : MonoBehaviour {
             }
         }
         return index_of_closest;
+    }
+
+    // find the index of the points in "points[]" which is closest to a line. Excliding a specified index
+    public int ClosestToLine(Vector2 line_start, Vector2 line_end, Vector2[] points, int index_excluding)
+    {
+        int index_of_closest = 0;
+        float distance_to_closest = Mathf.Infinity;
+        for (int i = 0; i < points.Length; i++)
+        {
+            if (i != index_excluding) // dont do for the excluded index
+            {
+                float distance = DistanceToLine(line_start, line_end, points[i]);
+                if (distance < distance_to_closest)
+                {
+                    distance_to_closest = distance;
+                    index_of_closest = i;
+                }
+            }
+        }
+        return index_of_closest;
+    }
+
+    public float DistanceToLine(Vector2 line_start, Vector2 line_end, Vector2 point)
+    {
+        // Trig. Use magnitude of cross product. effectively doing (point - line_start).magnitude * sin(angle)
+        Vector2 v1 = line_end - line_start;
+        Vector2 v2 = point - line_start;
+        v1.Normalize();
+        return Mathf.Abs(v1.x * v2.y - v1.y * v2.x);
     }
 
     // ------ these functions are used to determine if two polygons are overlapping ----- //

@@ -58,6 +58,10 @@ public class GrappleHook : MonoBehaviour
             rope.GetComponent<DistanceJoint2D>().distance = hook_to_player.magnitude;
             rope.GetComponent<RopeNode>().attached_object = transform;
         }
+    }
+
+    void LateUpdate()
+    {
         RenderLine();
     }
 
