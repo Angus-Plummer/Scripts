@@ -29,27 +29,9 @@ public class BallHandler : MonoBehaviour
             Vector2 mouse_loc = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             Vector2 direction = mouse_loc - (Vector2)transform.position;
 
-            // perform a raycast in the direction of the click
-            RaycastHit2D hit_info = Physics2D.Raycast(transform.position, direction, Mathf.Infinity, hook_target_layers.value);
-
-            // if there was a collider hit then make the hook and set its target
-            if (hit_info.collider)
-            {
-                // actual target location is where this raycast first meets a collider
-                Vector2 actual_target = hit_info.point;
-                // correct to have the hook a small normal displacement from the collider
-                actual_target += hit_info.normal * hook_prefab.GetComponent<CircleCollider2D>().radius * 0.2f;
-                // convert to the local coordinate space of the collided obstace
-                actual_target = hit_info.transform.InverseTransformPoint(actual_target);
-
-                // instantiate the new hook and set its target to be that calculated from the raycast
-                current_hook = (GameObject)Instantiate(hook_prefab, transform.position, Quaternion.identity, hit_info.transform);
-                current_hook.GetComponent<GrappleHook>().hook_target = actual_target;
-
-                current_hook.transform.localScale = new Vector3(current_hook.transform.localScale.x / hit_info.transform.lossyScale.x, 
-                                                                current_hook.transform.localScale.y / hit_info.transform.lossyScale.y, 1);
-
-            }
+            // instantiate the new hook and set its travel direction
+            current_hook = (GameObject)Instantiate(hook_prefab, transform.position, Quaternion.identity);
+            current_hook.GetComponent<GrappleHook>().travel_direction = direction;
         }
         else if (Input.GetMouseButtonDown(1))
         {
