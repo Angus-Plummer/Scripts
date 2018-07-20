@@ -11,15 +11,11 @@ public class RopeNode : MonoBehaviour {
     public LayerMask corner_layer; // layer mask for corner colliders
     public LayerMask obstacle_layer; // layer mask for obstacles
     public Transform attached_object;
+    public int attached_vertex; // index of the vertex of the polygon collider this node is attached to
     public GameObject child_node; // next node in chain
     public float length; // length of this segment of rope
 
-    private Transform last_corner = null; // the last corner collider that was collided with by this node's rope
-    public bool can_split_at_last_corner_again = false; // can only split again at the last corner it split at after it has moved away from the corner collider (prevents it retriggering)
-
-    private float previous_angle_with_child = 0; // keeps track of angle between node and child node directions. If it changes sign then they must be rejoined
-    public bool can_combine = false; // when initiated it is not possible to join with its child. This will become true when it has a child and the angle between them is increasing
-
+    public float vertex_offset; // the distance that the rope nodes will form from the corner of the attached obstacle
 
     // Use this for initialization
     void Awake ()
@@ -31,80 +27,65 @@ public class RopeNode : MonoBehaviour {
 	// Update is called once per frame
 	void Update ()
     {
+        UpdatePosition();
         Vector2 node_to_child = NodeToChild();
         GetComponent<DistanceJoint2D>().distance = length;
 
         RaycastHit2D hit_info; // to store rayscast info
             
         // first check if rope has collided with a corner. If so we need to split the rope
-        hit_info = Physics2D.Raycast(transform.position, node_to_child, node_to_child.magnitude, corner_layer.value);
+        hit_info = Physics2D.Raycast(transform.position, node_to_child, node_to_child.magnitude, obstacle_layer.value);
         if (hit_info.collider != null)
         {
-            if (hit_info.transform != last_corner || can_split_at_last_corner_again)
+            Vector2[] vertex_world_positions = new Vector2[hit_info.transform.GetComponent<PolygonCollider2D>().points.Length];
+            for(int i = 0; i < hit_info.transform.GetComponent<PolygonCollider2D>().points.Length; i++)
             {
-                if (child_node)
-                {
-                    if (hit_info.transform != child_node.GetComponent<RopeNode>().attached_object)
-                    {
-                        last_corner = hit_info.transform;
-                        SplitRope(hit_info.transform);
-                    }
-                }
-                else
-                {
-                    last_corner = hit_info.transform;
-                    SplitRope(hit_info.transform);
-                }
-                
+                vertex_world_positions[i] = hit_info.transform.TransformPoint(hit_info.transform.GetComponent<PolygonCollider2D>().points[i]);
             }
+            int vertex_index = ClosestPoint(hit_info.point, vertex_world_positions);
+            SplitRope(hit_info.transform, vertex_index);
         }
-        else if (last_corner)
-        {
-            can_split_at_last_corner_again = true;
-        }
+       
         // if the node has a child we need to check if it should rejoin with the child
         if (child_node != null)
         {
+            // the two rope segments should rejoin if a triangle shaped collider with corners of this node, child, and grandchild does not intersect with the obstacle whos corner the child of this node belongs to
+
+            // first update the position of the node, its child, and its grandchild
+            UpdatePosition();
+            child_node.GetComponent<RopeNode>().UpdatePosition();
+            if (child_node.GetComponent<RopeNode>().child_node)
+            {
+                child_node.GetComponent<RopeNode>().child_node.GetComponent<RopeNode>().UpdatePosition();
+            }
             Vector2 node_to_grandchild = NodeToChild() + child_node.GetComponent<RopeNode>().NodeToChild();
-            hit_info = Physics2D.Raycast(transform.position, node_to_grandchild, node_to_grandchild.magnitude, obstacle_layer.value);
-            // if it is allowed to combine with child then we check if it should be
-            if (can_combine)
+            Vector2[] points = new Vector2[3];
+            points[0] = Vector2.zero;
+            points[1] = NodeToChild();
+            points[2] = node_to_grandchild;
+            GetComponent<PolygonCollider2D>().points = points;
+            GetComponent<PolygonCollider2D>().enabled = true;
+            bool overlapping = ArePolygonsOverlapped(GetComponent<PolygonCollider2D>(), child_node.GetComponent<RopeNode>().attached_object.GetComponent<PolygonCollider2D>());
+            //GetComponent<PolygonCollider2D>().enabled = false;
+            if (!overlapping)
             {
-                float current_angle_with_child = AngleWithChild();
-                if (Mathf.Sign(previous_angle_with_child) != Mathf.Sign(current_angle_with_child) && hit_info.transform == null)
-                {
-                    JoinWithChild();
-                }
+                JoinWithChild();
             }
-            // if it cant be combined yet, we check if can_join should be set to true
-            else
-            {
-                // if there has been an obstacle between the node and its grandchild then set can_combine to true
-                if(hit_info.transform != null)
-                {
-                    can_combine = true;
-                }
-            }
-        }
-        // update the previous angle with child (not this is in separate if to above as the child may have been destroyed)
-        if (child_node != null)
-        {
-            previous_angle_with_child = AngleWithChild();
         }
 
         MaintainLength();
         GetComponent<DistanceJoint2D>().distance = length;
-        // update the position of the node to match its attached object
-        transform.position = attached_object.position;
+        UpdatePosition();
     }
 
     // split the rope at specified point
-    void SplitRope(Transform corner)
+    void SplitRope(Transform obstacle, int vertex_index)
     {
-        Vector2 node_to_split = (Vector2)corner.position - (Vector2)transform.position; // vector from this node to the split point
+        Vector2 corner_position = obstacle.TransformPoint(obstacle.GetComponent<PolygonCollider2D>().points[vertex_index]);
+        Vector2 node_to_split = corner_position - (Vector2)transform.position; // vector from this node to the split point
         GameObject current_child = child_node;
         // create and set up child node
-        child_node = (GameObject)Instantiate(node_prefab, corner.position, Quaternion.identity, transform);
+        child_node = (GameObject)Instantiate(node_prefab, corner_position, Quaternion.identity, transform);
         if (current_child)
         {
             current_child.transform.SetParent(child_node.transform);
@@ -112,8 +93,11 @@ public class RopeNode : MonoBehaviour {
             child_node.GetComponent<DistanceJoint2D>().enabled = false;
         }
 
-        // Declare corner as the transform the node is attached to
-        child_node.GetComponent<RopeNode>().attached_object = corner;
+        // set the attached obstacle and vertex of the new node
+        child_node.GetComponent<RopeNode>().attached_object = obstacle;
+        child_node.GetComponent<RopeNode>().attached_vertex = vertex_index;
+        // update the position to give correct offset from the vertex
+        child_node.GetComponent<RopeNode>().UpdatePosition();
 
         // child rope connects to the rigid body this node is attached to. distance is current distance - current node to corner
         child_node.GetComponent<DistanceJoint2D>().connectedBody = GetComponent<DistanceJoint2D>().connectedBody;
@@ -124,15 +108,6 @@ public class RopeNode : MonoBehaviour {
         GetComponent<DistanceJoint2D>().enabled = false;
         GetComponent<DistanceJoint2D>().connectedBody = child_node.GetComponent<Rigidbody2D>();
         length = node_to_split.magnitude;
-
-        // update combination and splitting flags. After splitting, the node must wait for certain conditions before being able to combine with its child or to split at the same corner again
-        // to combine: the angle between the node and its child must have grown
-        // to split again: there must have been a raycast to the child where the last corner wasnt seen
-        can_split_at_last_corner_again = false;
-        can_combine = false;
-
-        // update previous angle with child (otherwise will be 0 initially which can cause problems)
-        previous_angle_with_child = AngleWithChild();
     }
 
     // joins the rope with the child
@@ -162,6 +137,40 @@ public class RopeNode : MonoBehaviour {
         }
     }
 
+    // function to update the position of the rope node to the attached vertex of the attached object or the hook if it is the first node
+    // the position used is offset from the vertex by a small amount to make collision detection with the attached object easier
+    public void UpdatePosition()
+    {
+        if (attached_object == transform.parent) // if the attached object is the parent (i.e. if it is the hook the update position to the hook position)
+        {
+            transform.position = transform.parent.position;
+        }
+        else // if attached object is an obstacle then update the position to the attached vertex on the obstacle
+        {
+            PolygonCollider2D attached_collider = attached_object.GetComponent<PolygonCollider2D>();
+            int next_vertex_index = attached_vertex + 1;
+            int previous_vertex_index = attached_vertex - 1;
+
+            // wrap the next and previous index around if they are out of bounds
+            if (next_vertex_index == attached_collider.points.Length)
+            {
+                next_vertex_index -= attached_collider.points.Length;
+            }
+            if (previous_vertex_index == -1)
+            {
+                previous_vertex_index += attached_collider.points.Length;
+            }
+            // create vectors of the two edges
+            Vector2 edge1 = attached_collider.points[attached_vertex] - attached_collider.points[previous_vertex_index];
+            Vector2 edge2 = attached_collider.points[attached_vertex] - attached_collider.points[next_vertex_index];
+
+            Vector2 vertex_normal = (edge1.normalized + edge2.normalized).normalized;
+
+            Vector2 new_position = (Vector2)attached_object.TransformPoint(attached_collider.points[attached_vertex]) + vertex_normal * vertex_offset;
+            transform.position = new_position;
+        }
+    }
+
     // maintain length of the rope. will take or give length to the child node as appropriate to maintain the length
     public void MaintainLength()
     {
@@ -178,22 +187,21 @@ public class RopeNode : MonoBehaviour {
             }
             else
             {
-                float missing = delta - child_target_length;
-                actual_length -= missing;
-                child_node.GetComponent<RopeNode>().length = 0;
-                JoinWithChild();
+                if (false)//child_node.GetComponent<RopeNode>().child_node == null)
+                {
+                    Destroy(player.GetComponent<BallHandler>().current_hook);
+                    player.GetComponent<BallHandler>().current_hook = null;
+                }
+                else
+                {
+                    float missing = delta - child_target_length;
+                    actual_length -= missing;
+                    child_node.GetComponent<RopeNode>().length = 0;
+                    JoinWithChild();
+                }
             }
             length = actual_length;
         }
-    }
-
-    // short function to make it easier to understand and look cleaner
-    public float AngleWithChild()
-    {
-        Vector2 v1 = NodeToChild();
-        Vector2 v2 = child_node.GetComponent<RopeNode>().NodeToChild();
-        float sign = Mathf.Sign(v1.x * v2.y - v1.y * v2.x);
-        return sign * Vector2.Angle(v1, v2);
     }
 
     // returns vector to child node or to the player if it has none
@@ -209,6 +217,149 @@ public class RopeNode : MonoBehaviour {
             node_to_child = player.transform.position - transform.position;
         }
         return node_to_child;
+    }
+
+    // returns index of point in target_points that is closest to subject_point
+    public int ClosestPoint(Vector2 subject_point, Vector2[] target_points)
+    {
+        int index_of_closest = 0;
+        float distance_to_closest = Mathf.Infinity;
+        for(int i = 0; i < target_points.Length; i++)
+        {
+            float distance = (target_points[i] - subject_point).magnitude;
+            if ( distance < distance_to_closest)
+            {
+                distance_to_closest = distance;
+                index_of_closest = i;
+            }
+        }
+        return index_of_closest;
+    }
+
+    // ------ these functions are used to determine if two polygons are overlapping ----- //
+
+    //poly1 and poly2 are arrays of VELatlongs that represent polygons
+    bool ArePolygonsOverlapped(PolygonCollider2D poly1, PolygonCollider2D poly2)
+    {
+        // first do quick check to see if any points of one are contained within the other
+
+        // check if any points of poly1 are within poly2
+        for (int i = 0; i < poly1.points.Length; i++)
+        {
+            Vector2 world_point = poly1.transform.TransformPoint(poly1.points[i]);
+            if (poly2.OverlapPoint(world_point))
+            {
+                return true;
+            }
+        }
+        // check if any points of poly2 are within poly1
+        for (int i = 0; i < poly2.points.Length; i++)
+        {
+            Vector2 world_point = poly2.transform.TransformPoint(poly2.points[i]);
+            if (poly1.OverlapPoint(world_point))
+            {
+                return true;
+            }
+        }
+        // now need to check if they intersect anywhere
+
+        // close polygons
+        // create new arrays to hold closed polygons and copy over data
+        Vector2[] points1 = new Vector2[poly1.points.Length + 1];
+        Vector2[] points2 = new Vector2[poly2.points.Length + 1];
+        for (int i = 0; i < poly1.points.Length; i++)
+        {
+            points1[i] = poly1.transform.TransformPoint(poly1.points[i]);
+        }
+        points1[points1.Length - 1] = points1[0];
+        for (int i = 0; i < poly2.points.Length; i++)
+        {
+            points2[i] = poly2.transform.TransformPoint(poly2.points[i]);
+        }
+        points2[points2.Length - 1] = points2[0];
+
+        if (points1.Length >= 3 && points2.Length >= 3)
+        {
+            for (int i = 0; i < points1.Length - 1; i++)
+            {
+                for (int k = 0; k < points2.Length - 1; k++)
+                {
+                    if (PolylineIntersection(points1[i], points1[i + 1], points2[k], points2[k + 1]))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        return false;
+    }
+
+    // returns true if the vector between points a1-a2 intersects with the vector between points b1-b2
+    bool PolylineIntersection(Vector2 a1, Vector2 a2, Vector2 b1, Vector2 b2)
+    {
+        //Line segment 1 (a1, a2)
+        float a_y_delta = a2.y - a1.y;
+        float a_x_delta = a1.x - a2.x;
+        float C1 = a_y_delta * a1.x + a_x_delta * a1.y;
+
+        //Line segment 2 (b1,  b2)
+        float b_y_delta = b2.y - b1.y;
+        float b_x_delta = b1.x - b2.x;
+        float C2 = b_y_delta * b1.x + b_x_delta * b1.y;
+
+        // cross product magnitude (a*b*sin(angle))
+        float determinate = a_y_delta * b_x_delta - b_y_delta * a_x_delta;
+
+        if (determinate != 0)
+        {
+            float x = (b_x_delta * C1 - a_x_delta * C2) / determinate;
+            float y = (a_y_delta * C2 - b_y_delta * C1) / determinate;
+
+            Vector2 intersect = new Vector2(x, y);
+
+            if (InBoundedBox(a1, a2, intersect) && InBoundedBox(b1, b2, intersect))
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else
+        { //lines are parrallel
+            return false;
+        }
+    }
+
+    // returns true if the test point is contained within a box defined by the diagonal corners corner1 and corner2
+    bool InBoundedBox(Vector2 corner1, Vector2 corner2, Vector2 test_point)
+    {
+        bool between_y;
+        bool between_x;
+
+        if (corner1.y < corner2.y)
+        {
+            between_y = (corner1.y <= test_point.y && corner2.y >= test_point.y);
+        }
+        else
+        {
+            between_y = (corner1.y >= test_point.y && corner2.y <= test_point.y);
+        }
+
+        if (corner1.x < corner2.x)
+        {
+            between_x = (corner1.x <= test_point.x && corner2.x >= test_point.x);
+        }
+        else
+        {
+            between_x = (corner1.x >= test_point.x && corner2.x <= test_point.x);
+        }
+
+        return (between_y && between_x);
     }
 }
 
