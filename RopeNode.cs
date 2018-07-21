@@ -5,17 +5,18 @@ using UnityEngine;
 public class RopeNode : MonoBehaviour {
 
     public Transform player;
-
     public Object node_prefab;
 
-    public LayerMask corner_layer; // layer mask for corner colliders
     public LayerMask obstacle_layer; // layer mask for obstacles
     public Transform attached_object;
+
     public int attached_vertex; // index of the vertex of the polygon collider this node is attached to
+    public float vertex_offset; // the distance that the rope nodes will form from the vertex of the attached obstacle
+
     public GameObject child_node; // next node in chain
+
     public float length; // length of this segment of rope
 
-    public float vertex_offset; // the distance that the rope nodes will form from the corner of the attached obstacle
 
     // Use this for initialization
     void Awake ()
@@ -82,7 +83,7 @@ public class RopeNode : MonoBehaviour {
             GetComponent<PolygonCollider2D>().points = points;
             GetComponent<PolygonCollider2D>().enabled = true;
             bool overlapping = ArePolygonsOverlapped(GetComponent<PolygonCollider2D>(), child_node.GetComponent<RopeNode>().attached_object.GetComponent<PolygonCollider2D>());
-            //GetComponent<PolygonCollider2D>().enabled = false;
+            GetComponent<PolygonCollider2D>().enabled = false;
             if (!overlapping)
             {
                 JoinWithChild();
@@ -205,7 +206,7 @@ public class RopeNode : MonoBehaviour {
             }
             else
             {
-                if (false)//child_node.GetComponent<RopeNode>().child_node == null)
+                if (child_node.GetComponent<RopeNode>().child_node == null)
                 {
                     Destroy(player.GetComponent<BallHandler>().current_hook);
                     player.GetComponent<BallHandler>().current_hook = null;
@@ -234,23 +235,6 @@ public class RopeNode : MonoBehaviour {
             node_to_child = player.transform.position - transform.position;
         }
         return node_to_child;
-    }
-
-    // returns index of point in target_points that is closest to subject_point
-    public int ClosestPoint(Vector2 subject_point, Vector2[] target_points)
-    {
-        int index_of_closest = 0;
-        float distance_to_closest = Mathf.Infinity;
-        for(int i = 0; i < target_points.Length; i++)
-        {
-            float distance = (target_points[i] - subject_point).magnitude;
-            if ( distance < distance_to_closest)
-            {
-                distance_to_closest = distance;
-                index_of_closest = i;
-            }
-        }
-        return index_of_closest;
     }
 
     // find the index of the points in "points[]" which is closest to a line. Excliding a specified index

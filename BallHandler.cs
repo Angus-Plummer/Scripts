@@ -44,7 +44,7 @@ public class BallHandler : MonoBehaviour
 
         if(GetComponent<Rigidbody2D>().velocity == Vector2.zero && current_hook == null)
         {
-            Respawn();
+            //Respawn();
         }
     }
 
