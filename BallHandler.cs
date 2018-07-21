@@ -58,6 +58,12 @@ public class BallHandler : MonoBehaviour
         }
     }
 
+    public void BreakHook()
+    {
+        Destroy(current_hook);
+        current_hook = null;
+    }
+
     void Respawn()
     {
         transform.position = Vector3.zero;

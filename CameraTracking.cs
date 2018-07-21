@@ -9,6 +9,8 @@ public class CameraTracking : MonoBehaviour
     private Vector3 velocity = Vector3.zero;
     public float offset_fraction;
     private Vector3 offset;
+    public bool lock_x;
+    public bool lock_y;
 
     // Use this for initialization
     void Start ()
@@ -27,6 +29,14 @@ public class CameraTracking : MonoBehaviour
 
     void PanCamera(Vector3 target)
     {
+        if (lock_x)
+        {
+            target.x = transform.position.x;
+        }
+        if (lock_y)
+        {
+            target.y = transform.position.y;
+        }
         Vector3 new_pos = Vector3.SmoothDamp(transform.position, target, ref velocity, pan_time);
         transform.position = new_pos;
     }

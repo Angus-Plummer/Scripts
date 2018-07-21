@@ -20,9 +20,6 @@ public class ColourPalettes : MonoBehaviour
     public Color[] grapefruit = new Color[5];
 
 
-
-
-
     public Color[] current_palette;
 
     public static Dictionary<string, int> object_index = new Dictionary<string, int>()
