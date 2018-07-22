@@ -15,7 +15,6 @@ public class ColourManager : MonoBehaviour {
 
     private void UpdateColour()
     {
-        print("key = " + transform.tag);
         Color sprite_colour = colour_palettes.GetComponent<ColourPalettes>().GetColour(transform.tag);
         sprite_colour.a = 1f;
         GetComponent<SpriteRenderer>().color = sprite_colour;

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// this script adjusts the camera so that the width of the camera view is the same for all aspect ratios (9:18 is default)
+// this script adjusts the camera so that the height of the camera view is the same for all aspect ratios (9:18 is default)
 public class AspectRatioFixer : MonoBehaviour {
 
     Camera cam;
@@ -10,7 +10,7 @@ public class AspectRatioFixer : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
         cam = GetComponent<Camera>();
-        cam.orthographicSize = cam.orthographicSize * default_aspect / cam.aspect;
+        cam.orthographicSize = cam.orthographicSize * cam.aspect / default_aspect;
     }
 	
 	// Update is called once per frame

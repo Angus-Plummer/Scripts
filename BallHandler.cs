@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class BallHandler : MonoBehaviour
 {
@@ -13,39 +14,45 @@ public class BallHandler : MonoBehaviour
     // layer mask for layers that the hook can latch on to
     public LayerMask hook_target_layers;
 
+    // location where the ball spawns at
+    public Vector2 spawn_location;
 
-    // Update is called once per frame
-    void Update()
+    public void HandlePointerEvent(BaseEventData data)
     {
-        // on left mouse click down
-        if (Input.GetMouseButtonDown(0))
+        PointerEventData p_data = (PointerEventData)data;
+        if (p_data.button == PointerEventData.InputButton.Left)
         {
-            // if there is already a rope, then first destroy it
-            if (current_hook)
-            {
-                Destroy(current_hook);
-            }
-            // get mouse location in world space and the direction towards that location
-            Vector2 mouse_loc = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            Vector2 direction = mouse_loc - (Vector2)transform.position;
-
-            // instantiate the new hook and set its travel direction
-            current_hook = (GameObject)Instantiate(hook_prefab, transform.position, Quaternion.identity);
-            current_hook.GetComponent<GrappleHook>().travel_direction = direction;
+            Vector2 click_location = p_data.pressPosition;
+            FireHook(click_location);
         }
-        else if (Input.GetMouseButtonDown(1))
+        else if(p_data.button == PointerEventData.InputButton.Right)
         {
-            // if there is already a rope, then first destroy it
-            if (current_hook)
-            {
-                Destroy(current_hook);
-            }
+            BreakHook();
+        }
+    }
+
+    public void FireHook(Vector2 click_location)
+    {
+        
+        // if there is already a rope, then first destroy it
+        if (current_hook)
+        {
+            BreakHook();
         }
 
-        if(GetComponent<Rigidbody2D>().velocity == Vector2.zero && current_hook == null)
-        {
-            //Respawn();
-        }
+        // get mouse location in world space and the direction towards that location
+        Vector2 mouse_loc = Camera.main.ScreenToWorldPoint(click_location);
+        Vector2 direction = mouse_loc - (Vector2)transform.position;
+
+        // instantiate the new hook and set its travel direction
+        current_hook = (GameObject)Instantiate(hook_prefab, transform.position, Quaternion.identity);
+        current_hook.GetComponent<GrappleHook>().travel_direction = direction;
+    }
+
+    public void BreakHook()
+    {
+        Destroy(current_hook);
+        current_hook = null;
     }
 
     // called when the player hits a wall
@@ -56,16 +63,5 @@ public class BallHandler : MonoBehaviour
         {
             //Destroy(current_hook);
         }
-    }
-
-    public void BreakHook()
-    {
-        Destroy(current_hook);
-        current_hook = null;
-    }
-
-    void Respawn()
-    {
-        transform.position = Vector3.zero;
     }
 }
