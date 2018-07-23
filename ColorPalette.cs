@@ -2,30 +2,30 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ColorPalette : MonoBehaviour
+[CreateAssetMenu(fileName = "New Color Palette", menuName = "Color Palette")]
+public class ColorPalette : ScriptableObject
 {
+    public new string name;
+    [SerializeField]
+    private Color[] colors;
+    [SerializeField]
+    private TMPro.TMP_ColorGradient text_gradient; 
 
-    public Color[] colors;
-
-    public ColorPalette()
+    ColorPalette()
     {
         colors = new Color[5];
+        for (int i = 0; i < colors.Length; i++){
+            colors[i].a = 1;
+        }
     }
 
-    public static Dictionary<string, int> object_index = new Dictionary<string, int>()
+    public Color GetColor(int index)
     {
-        {"Background", 0},
-        {"Level", 1},
-        {"Player", 2},
-        {"Trail", 3},
-        {"Hook", 2},
-        {"Rope", 4}
+        return colors[index];
+    }
 
-    };
-
-    public Color GetColour(string tag)
+    public TMPro.TMP_ColorGradient GetTextGradient()
     {
-        return colors[object_index[tag]];
-
+        return text_gradient;
     }
 }

@@ -1,37 +1,73 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class ColorManager : MonoBehaviour {
 
     private ColorPalette color_palette;
+    [Range(0,4)]
+    public int color_index;
 
 
-    void Start()
+    private void Start()
     {
-        color_palette = GameObject.FindGameObjectWithTag("Color Palette").GetComponent<ColorPalette>();
-        UpdateColour();
+        if (color_palette != GameManager.GetColorPalette())
+        {
+            color_palette = GameManager.GetColorPalette();
+            UpdateColour();
+        }
+    }
+
+    private void Update()
+    {
+        if (color_palette != GameManager.GetColorPalette())
+        {
+            color_palette = GameManager.GetColorPalette();
+            UpdateColour();
+        }
     }
 
     private void UpdateColour()
     {
-        Color sprite_colour = color_palette.GetColour(transform.tag);
-        sprite_colour.a = 1f;
-        GetComponent<SpriteRenderer>().color = sprite_colour;
+        if (gameObject.layer == 5) // 5 = UI layer
+        {
+            if (transform.tag == "Text")
+            {
+                if (GetComponent<TMPro.TextMeshProUGUI>().enableVertexGradient)
+                {
+                    GetComponent<TMPro.TextMeshProUGUI>().colorGradientPreset = color_palette.GetTextGradient();
+                    GetComponent<TMPro.TextMeshProUGUI>().outlineColor = color_palette.GetColor(0);
+                }
+                else
+                {
+                    GetComponent<TMPro.TextMeshProUGUI>().color = color_palette.GetColor(color_index);
+                }
+                
+            }
+            else
+            {
 
-        if(transform.tag == "Hook")
-        {
-            Color rope_colour = color_palette.GetColour("Rope");
-            rope_colour.a = 1f;
-            GetComponent<LineRenderer>().startColor = rope_colour;
-            GetComponent<LineRenderer>().endColor = rope_colour;
+                GetComponent<Image>().color = color_palette.GetColor(color_index);
+            }
         }
-        else if (transform.tag == "Player")
+        // if not on ui layer
+        else
         {
-            Color trail_colour = color_palette.GetColour("Trail");
-            trail_colour.a = 1f;
-            GetComponent<TrailRenderer>().startColor = trail_colour;
-            GetComponent<TrailRenderer>().endColor = trail_colour;
+            GetComponent<SpriteRenderer>().color = color_palette.GetColor(color_index);
+
+            if (transform.tag == "Hook")
+            {
+                Color rope_colour = color_palette.GetColor(3);
+                GetComponent<LineRenderer>().startColor = rope_colour;
+                GetComponent<LineRenderer>().endColor = rope_colour;
+            }
+            else if (transform.tag == "Player")
+            {
+                Color trail_colour = color_palette.GetColor(4);
+                GetComponent<TrailRenderer>().startColor = trail_colour;
+                GetComponent<TrailRenderer>().endColor = trail_colour;
+            }
         }
     }
 }

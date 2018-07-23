@@ -6,13 +6,19 @@ public class MovingPlatform : MonoBehaviour {
 
     public float speed; // speed of platform
     // platform will move between two targets
-    public Vector2 position_1; // initial target position
-    public Vector2 position_2; // other target position
-    private Vector2 target; // current position moving towards
+    public Vector2 position_1; // initial target position (in local coords)
+    public Vector2 position_2; // other target position (in local coords)
+    public Vector2 target; // current position moving towards
+
+    // positions in world coords
+    private Vector2 world_position_1;
+    private Vector2 world_position_2;
 
 	// Set initial target as position 1
 	void Start () {
-        target = position_1;
+        world_position_1 = (Vector2)transform.position + position_1;
+        world_position_2 = (Vector2)transform.position + position_2;
+        target = world_position_1;
 	}
 	
 	// Update is called once per frame
@@ -29,13 +35,13 @@ public class MovingPlatform : MonoBehaviour {
     // swaps the target between the two positions
     private void SwapTarget()
     {
-        if (target == position_1)
+        if (target == world_position_1)
         {
-            target = position_2;
+            target = world_position_2;
         }
         else
         {
-            target = position_1;
+            target = world_position_1;
         }
 
     }

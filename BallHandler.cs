@@ -17,6 +17,13 @@ public class BallHandler : MonoBehaviour
     // location where the ball spawns at
     public Vector2 spawn_location;
 
+    private Vector2 position_last_frame; // used to ensure the velocity of the ball is maintained when breaking the rope
+
+    private void LateUpdate()
+    {
+        position_last_frame = transform.position;
+    }
+
     public void HandlePointerEvent(BaseEventData data)
     {
         PointerEventData p_data = (PointerEventData)data;
@@ -52,6 +59,8 @@ public class BallHandler : MonoBehaviour
     {
         Destroy(current_hook);
         current_hook = null;
+        Vector2 velocity = ((Vector2)transform.position - position_last_frame) / Time.deltaTime;
+        GetComponent<Rigidbody2D>().velocity = velocity;
     }
 
     // called when the player hits a wall

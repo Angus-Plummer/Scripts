@@ -18,8 +18,7 @@ public class DeathBox : MonoBehaviour {
     {
         if (other.gameObject.tag == "Player")
         {
-            GameObject GameManager = GameObject.FindGameObjectWithTag("Game Manager");
-            GameManager.GetComponent<GameManager>().TriggerDeath();
+            GameManager.RestartScene();
         }
     }
 }

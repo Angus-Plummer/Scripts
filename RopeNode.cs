@@ -22,7 +22,7 @@ public class RopeNode : MonoBehaviour {
     void Awake ()
     {
         player = GameObject.FindGameObjectWithTag("Player").transform;
-        node_prefab = Resources.Load("RopeNode");
+        node_prefab = Resources.Load("Prefabs/Rope Node");
     }
 	
 	// Update is called once per frame

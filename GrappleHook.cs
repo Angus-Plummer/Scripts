@@ -26,7 +26,7 @@ public class GrappleHook : MonoBehaviour
     {
         player = GameObject.FindGameObjectWithTag("Player").transform;
         rope_line = GetComponent<LineRenderer>();
-        node_prefab = Resources.Load("RopeNode");
+        node_prefab = Resources.Load("Prefabs/Rope Node");
         GetComponent<Rigidbody2D>().velocity = travel_direction.normalized * travel_speed;
     }
 
@@ -52,11 +52,8 @@ public class GrappleHook : MonoBehaviour
         {
             connected = true;
             local_offset = attached_obstacle.transform.InverseTransformPoint(transform.position);
-            rope = (GameObject)Instantiate(node_prefab, transform.position, Quaternion.identity, transform);
-            rope.GetComponent<DistanceJoint2D>().connectedBody = player.GetComponent<Rigidbody2D>();
-            rope.GetComponent<RopeNode>().length = hook_to_player.magnitude;
-            rope.GetComponent<DistanceJoint2D>().distance = hook_to_player.magnitude;
-            rope.GetComponent<RopeNode>().attached_object = transform;
+            CreateRope();
+            
         }
         // if the hook is connected then just update its position
         else
@@ -68,6 +65,16 @@ public class GrappleHook : MonoBehaviour
     void LateUpdate()
     {
         RenderLine();
+    }
+
+    // function creates a rope node at the current location an sets it up
+    private void CreateRope()
+    {
+        rope = (GameObject)Instantiate(node_prefab, transform.position, Quaternion.identity, transform);
+        rope.GetComponent<DistanceJoint2D>().connectedBody = player.GetComponent<Rigidbody2D>();
+        rope.GetComponent<DistanceJoint2D>().distance = hook_to_player.magnitude;
+        rope.GetComponent<RopeNode>().length = hook_to_player.magnitude;
+        rope.GetComponent<RopeNode>().attached_object = transform;
     }
 
     private void OnTriggerEnter2D(Collider2D collider)
