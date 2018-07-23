@@ -20,18 +20,20 @@ public class BallHandler : MonoBehaviour
     public void HandlePointerEvent(BaseEventData data)
     {
         PointerEventData p_data = (PointerEventData)data;
-        if (p_data.button == PointerEventData.InputButton.Left)
+        if (!current_hook)
         {
+            // get mouse location in world space and the direction towards that location
             Vector2 click_location = p_data.pressPosition;
+            click_location = Camera.main.ScreenToWorldPoint(click_location);
             FireHook(click_location);
         }
-        else if(p_data.button == PointerEventData.InputButton.Right)
+        else
         {
             BreakHook();
         }
     }
 
-    public void FireHook(Vector2 click_location)
+    public void FireHook(Vector2 target)
     {
         
         // if there is already a rope, then first destroy it
@@ -39,11 +41,8 @@ public class BallHandler : MonoBehaviour
         {
             BreakHook();
         }
-
-        // get mouse location in world space and the direction towards that location
-        Vector2 mouse_loc = Camera.main.ScreenToWorldPoint(click_location);
-        Vector2 direction = mouse_loc - (Vector2)transform.position;
-
+        
+        Vector2 direction = target - (Vector2)transform.position;
         // instantiate the new hook and set its travel direction
         current_hook = (GameObject)Instantiate(hook_prefab, transform.position, Quaternion.identity);
         current_hook.GetComponent<GrappleHook>().travel_direction = direction;

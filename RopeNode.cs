@@ -191,7 +191,7 @@ public class RopeNode : MonoBehaviour {
     // maintain length of the rope. will take or give length to the child node as appropriate to maintain the length
     public void MaintainLength()
     {
-        // only do anything if the node has a child
+        // if there is a child node then exchange length with it
         if (child_node)
         {
             float target_length = length;
@@ -218,6 +218,15 @@ public class RopeNode : MonoBehaviour {
                     child_node.GetComponent<RopeNode>().length = 0;
                     JoinWithChild();
                 }
+            }
+        }
+        // if there is no child node (i.e. this node is attached to the player) then shorten the rope to the distance the player is from the node
+        else
+        {
+            float current_separation = NodeToChild().magnitude;
+            if(current_separation < length)
+            {
+                length = current_separation;
             }
         }
     }
