@@ -17,7 +17,19 @@ public class BallHandler : MonoBehaviour
     // location where the ball spawns at
     public Vector2 spawn_location;
 
+    private bool respawning = false;
+
     private Vector2 position_last_frame; // used to ensure the velocity of the ball is maintained when breaking the rope
+
+    // need to clear the trail renderer after respawning. It seems this must be done in fixed update or it wont work. this is a temporary solution
+    private void FixedUpdate()
+    {
+        if (respawning)
+        {
+            GetComponent<TrailRenderer>().Clear();
+            respawning = false;
+        }
+    }
 
     private void LateUpdate()
     {
@@ -61,6 +73,16 @@ public class BallHandler : MonoBehaviour
         current_hook = null;
         Vector2 velocity = ((Vector2)transform.position - position_last_frame) / Time.deltaTime;
         GetComponent<Rigidbody2D>().velocity = velocity;
+    }
+
+    public void Respawn()
+    {
+        BreakHook();
+        GetComponent<Rigidbody2D>().velocity = Vector2.zero;
+        transform.position = spawn_location;
+        GetComponent<TrailRenderer>().Clear();
+        respawning = true;
+
     }
 
     // called when the player hits a wall

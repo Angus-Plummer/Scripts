@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class DeathBox : MonoBehaviour {
 
+    public bool wall_of_death;
+
 	// Use this for initialization
 	void Start () {
 		
@@ -18,7 +20,14 @@ public class DeathBox : MonoBehaviour {
     {
         if (other.gameObject.tag == "Player")
         {
-            GameManager.RestartScene();
+            if (wall_of_death)
+            {
+                GameManager.RestartScene();
+            }
+            else
+            {
+                other.transform.GetComponent<BallHandler>().Respawn();
+            }
         }
     }
 }

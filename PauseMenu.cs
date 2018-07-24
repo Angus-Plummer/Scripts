@@ -4,18 +4,19 @@ using UnityEngine;
 
 public class PauseMenu : MonoBehaviour {
 
-    public GameObject PauseMenuUI;
+    public GameObject pause_menu_ui;
+    public GameObject wall_of_death;
 
     public void Resume()
     {
         GameManager.Resume();
-        PauseMenuUI.SetActive(false);
+        pause_menu_ui.SetActive(false);
     }
 
     public void Pause()
     {
         GameManager.Pause();
-        PauseMenuUI.SetActive(true);
+        pause_menu_ui.SetActive(true);
     }
 
     public void Quit()
