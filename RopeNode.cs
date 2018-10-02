@@ -194,39 +194,34 @@ public class RopeNode : MonoBehaviour {
         // if there is a child node then exchange length with it
         if (child_node)
         {
-            float target_length = length;
-            float actual_length = NodeToChild().magnitude;
-            float delta = actual_length - target_length;
-            length = actual_length;
+            // find change in length from old length (stored length variable) to the new length (calc from current node separation)
+            float new_length = NodeToChild().magnitude;
+            float delta = new_length - length; // delta > 0 -> take from child. delta < 0 -> give to child
+            // update the length variable to reflect the change
+            length = new_length;
+            // reduce child nodes length by delta
+            child_node.GetComponent<RopeNode>().length -= delta;
 
-            float child_target_length = child_node.GetComponent<RopeNode>().length;
-            if (child_target_length > delta)
+            // must handle case when child rope length is now less than 0
+            if(child_node.GetComponent<RopeNode>().length <= 0)
             {
-                child_node.GetComponent<RopeNode>().length -= delta;
-            }
-            else
-            {
+                // if the child node connects to the player then destroy the whole rope
                 if (child_node.GetComponent<RopeNode>().child_node == null)
                 {
                     Destroy(player.GetComponent<BallHandler>().current_hook);
                     player.GetComponent<BallHandler>().current_hook = null;
                 }
+                // if it connects to another rope node then see if it can take length from its own children
                 else
                 {
-                    float missing = delta - child_target_length;
-                    length -= missing;
-                    child_node.GetComponent<RopeNode>().length = 0;
-                    JoinWithChild();
+                    child_node.GetComponent<RopeNode>().MaintainLength();
+                    // if its length is still negative then destroy the rope
+                    if (child_node.GetComponent<RopeNode>().length < 0)
+                    {
+                        Destroy(player.GetComponent<BallHandler>().current_hook);
+                        player.GetComponent<BallHandler>().current_hook = null;
+                    }
                 }
-            }
-        }
-        // if there is no child node (i.e. this node is attached to the player) then shorten the rope to the distance the player is from the node
-        else
-        {
-            float current_separation = NodeToChild().magnitude;
-            if(current_separation < length)
-            {
-                length = current_separation;
             }
         }
     }

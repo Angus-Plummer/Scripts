@@ -17,4 +17,8 @@ public class MainMenus : MonoBehaviour {
     {
         GameManager.SetColorPalette(color_palette);
     }
+    public void SetQuality(int quality_index)
+    {
+        QualitySettings.SetQualityLevel(quality_index);
+    }
 }
