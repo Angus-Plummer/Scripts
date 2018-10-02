@@ -156,9 +156,10 @@ public class RopeNode : MonoBehaviour {
 
     // function to update the position of the rope node to the attached vertex of the attached object or the hook if it is the first node
     // the position used is offset from the vertex by a small amount to make collision detection with the attached object easier
+    // do this fully each frame in case the object it is attached to is changing in size, as this would affect the offset of the rope from the attached object
     public void UpdatePosition()
     {
-        if (attached_object == transform.parent) // if the attached object is the parent (i.e. if it is the hook the update position to the hook position)
+        if (attached_object == transform.parent) // if the attached object is the parent (i.e. if it is the hook then update position to the hook position)
         {
             transform.position = transform.parent.position;
         }
@@ -183,7 +184,7 @@ public class RopeNode : MonoBehaviour {
 
             Vector2 vertex_normal = (edge1.normalized + edge2.normalized).normalized;
 
-            Vector2 new_position = (Vector2)attached_object.TransformPoint(attached_collider.points[attached_vertex]) + (Vector2)attached_object.TransformDirection(vertex_normal).normalized * vertex_offset;
+            Vector2 new_position = (Vector2)attached_object.TransformPoint(attached_collider.points[attached_vertex]) + (Vector2)attached_object.TransformVector(vertex_normal).normalized * vertex_offset;
             transform.position = new_position;
         }
     }
