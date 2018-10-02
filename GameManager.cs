@@ -9,25 +9,18 @@ public class GameManager : MonoBehaviour {
     public static bool game_is_paused = false;
     private static float timescale_at_pause = 1f;
 
-    public GameObject wall_of_death;
-
 	// Use this for initialization
 	void Awake ()
     {
         UpdateColorPalette();
         Screen.orientation = screen_orientation;
-
-        // TEMPORARY SOLUTION TO WALL OF DEATH TOGGLE
-        if (wall_of_death)
+        // set quality level to same as in prefs if it has been changed from default
+        if(PlayerPrefs.HasKey("Quality Level"))
         {
-            if (PlayerPrefs.HasKey("wall_of_death"))
-            {
-                if (PlayerPrefs.GetInt("wall_of_death") == 0)
-                {
-                    wall_of_death.SetActive(false);
-                }
-            }
+            int quality_level = PlayerPrefs.GetInt("Quality Level");
+            QualitySettings.SetQualityLevel(quality_level);
         }
+
     }
 
     public static void RestartScene()
@@ -94,20 +87,5 @@ public class GameManager : MonoBehaviour {
         
         string palette_path = "Colors/Color Palettes/" + palette_name;
         current_color_palette = (ColorPalette)Resources.Load(palette_path);
-    }
-
-    // TEMPORARY
-    public void ToggleWallOfDeath()
-    {
-        if (wall_of_death.activeInHierarchy)
-        {
-            wall_of_death.SetActive(false);
-            PlayerPrefs.SetInt("wall_of_death", 0);
-        }
-        else
-        {
-            wall_of_death.SetActive(true);
-            PlayerPrefs.SetInt("wall_of_death", 1);
-        }
     }
 }
